@@ -97,7 +97,7 @@ init(void)
     if (access(ASIC_OVSDB_PATH, F_OK) != -1) {
         snprintf(cmd_str, MAX_CMD_LEN, "sudo rm -rf %s", ASIC_OVSDB_PATH);
         if (system(cmd_str) != 0) {
-            VLOG_ERR("Failed to delete Internal 'ASIC' OVS ovsdb.db file retry in 10 sec");
+            VLOG_ERR("Failed to delete Internal 'ASIC' OVS ovsdb.db file");
         }
     } else {
         VLOG_DBG("Internal 'ASIC' OVS ovsdb.db file does not exist");
