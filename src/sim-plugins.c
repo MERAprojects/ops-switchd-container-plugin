@@ -49,8 +49,8 @@ robustServiceCmd(const char* serviceName, bool isStart)
     while (retry > 0)
     {
        if (system(serviceCmd) != 0) {
-            VLOG_ERR("[%u] Command \"%s\" returned non-zero code. Retry in 5 sec",
-                     (10 - retry), serviceCmd);
+            VLOG_ERR("[%u] Command \"%s\" returned non-zero code. Retry in %u sec",
+                     (10 - retry), SLEEP_INTERVAL, serviceCmd);
             retry--;
             sleep(SLEEP_INTERVAL);
             /* As the start/stop cmd itself returned non-zero code no need to
@@ -61,8 +61,8 @@ robustServiceCmd(const char* serviceName, bool isStart)
         if ((system(checkCmd) != 0) && !isStart) break;
         else if (isStart) break;
 
-        VLOG_ERR("[%u] Command \"%s\" has no effect. Retry in 5 sec",
-                 (10 - retry), serviceCmd);
+        VLOG_ERR("[%u] Command \"%s\" has no effect. Retry in %u sec",
+                 (10 - retry), SLEEP_INTERVAL, serviceCmd);
         retry--;
         sleep(SLEEP_INTERVAL);
     }
