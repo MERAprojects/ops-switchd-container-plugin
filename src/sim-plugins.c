@@ -31,14 +31,50 @@
 #define destroy libovs_sim_plugin_LTX_destroy
 #define netdev_register libovs_sim_plugin_LTX_netdev_register
 #define ofproto_register libovs_sim_plugin_LTX_ofproto_register
+#define SLEEP_INTERVAL 5
 
 VLOG_DEFINE_THIS_MODULE(sim_plugin);
+
+static void
+robustServiceCmd(const char* serviceName, bool isStart)
+{
+    int retry = 10;
+    char serviceCmd[MAX_CMD_LEN];
+    char checkCmd[MAX_CMD_LEN];
+
+    snprintf(serviceCmd, MAX_CMD_LEN, "systemctl %s %s",
+             (isStart) ? "start" : "stop", serviceName);
+    snprintf(checkCmd, MAX_CMD_LEN, "systemctl is-active %s", serviceName);
+
+    while (retry > 0)
+    {
+       if (system(serviceCmd) != 0) {
+            VLOG_ERR("[%u] Command \"%s\" returned non-zero code. Retry in 5 sec",
+                     (10 - retry), serviceCmd);
+            retry--;
+            sleep(SLEEP_INTERVAL);
+            /* As the start/stop cmd itself returned non-zero code no need to
+               execute code below to check service status as obviously it was not changed */
+            continue;
+        }
+
+        if ((system(checkCmd) != 0) && !isStart) break;
+        else if (isStart) break;
+
+        VLOG_ERR("[%u] Command \"%s\" has no effect. Retry in 5 sec",
+                 (10 - retry), serviceCmd);
+        retry--;
+        sleep(SLEEP_INTERVAL);
+    }
+}
 
 void
 init(void)
 {
     int retval;
     char cmd_str[MAX_CMD_LEN];
+    bool start = true;
+    bool stop = false;
 
     /* Event log initialization for sFlow */
     retval = event_log_init("SFLOW");
@@ -55,30 +91,20 @@ init(void)
     * ovsdb-server again which recreates the "ASIC" database file and finally
     * start the ovs-vswitchd-sim daemon before ops-switchd daemon gets
     * restarted.*/
-    if (system("systemctl stop openvswitch-sim") != 0) {
-        VLOG_ERR("Failed to stop Internal 'ASIC' OVS openvswitch.service");
-    }
-
-    if (system("systemctl stop ovsdb-server-sim") != 0) {
-        VLOG_ERR("Failed to stop Internal 'ASIC' OVS ovsdb-server-sim.service");
-    }
+    robustServiceCmd("openvswitch-sim", stop);
+    robustServiceCmd("ovsdb-server-sim", stop);
 
     if (access(ASIC_OVSDB_PATH, F_OK) != -1) {
         snprintf(cmd_str, MAX_CMD_LEN, "sudo rm -rf %s", ASIC_OVSDB_PATH);
         if (system(cmd_str) != 0) {
-            VLOG_ERR("Failed to delete Internal 'ASIC' OVS ovsdb.db file");
+            VLOG_ERR("Failed to delete Internal 'ASIC' OVS ovsdb.db file retry in 10 sec");
         }
     } else {
         VLOG_DBG("Internal 'ASIC' OVS ovsdb.db file does not exist");
     }
 
-    if (system("systemctl start ovsdb-server-sim") != 0) {
-        VLOG_ERR("Failed to start Internal 'ASIC' OVS ovsdb-server-sim.service");
-    }
-
-    if (system("systemctl start openvswitch-sim") != 0) {
-        VLOG_ERR("Failed to start Internal 'ASIC' OVS openvswitch.service");
-    }
+    robustServiceCmd("openvswitch-sim", start);
+    robustServiceCmd("ovsdb-server-sim", start);
 
     register_qos_extension();
     sim_copp_init();
