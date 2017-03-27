@@ -58,7 +58,10 @@ robustServiceCmd(const char* serviceName, bool isStart)
             continue;
         }
 
-        if ((system(checkCmd) != 0) && !isStart) break;
+        if (system(checkCmd) != 0)
+        {
+            if (!isStart) break;
+        }
         else if (isStart) break;
 
         VLOG_ERR("[%u] Command \"%s\" has no effect. Retry in %u sec",
