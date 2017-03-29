@@ -32,13 +32,14 @@
 #define netdev_register libovs_sim_plugin_LTX_netdev_register
 #define ofproto_register libovs_sim_plugin_LTX_ofproto_register
 #define SLEEP_INTERVAL 5
+#define NUM_OF_RETRIES 10
 
 VLOG_DEFINE_THIS_MODULE(sim_plugin);
 
 static void
 robustServiceCmd(const char* serviceName, bool isStart)
 {
-    int retry = 10;
+    int retry = NUM_OF_RETRIES;
     char serviceCmd[MAX_CMD_LEN];
     char checkCmd[MAX_CMD_LEN];
 
@@ -50,7 +51,7 @@ robustServiceCmd(const char* serviceName, bool isStart)
     {
        if (system(serviceCmd) != 0) {
             VLOG_ERR("[%u] Command \"%s\" returned non-zero code. Retry in %u sec",
-                     (10 - retry), serviceCmd, SLEEP_INTERVAL);
+                     (NUM_OF_RETRIES - retry), serviceCmd, SLEEP_INTERVAL);
             retry--;
             sleep(SLEEP_INTERVAL);
             /* As the start/stop cmd itself returned non-zero code no need to
@@ -65,7 +66,7 @@ robustServiceCmd(const char* serviceName, bool isStart)
         else if (isStart) break;
 
         VLOG_ERR("[%u] Command \"%s\" has no effect. Retry in %u sec",
-                 (10 - retry), serviceCmd, SLEEP_INTERVAL);
+                 (NUM_OF_RETRIES - retry), serviceCmd, SLEEP_INTERVAL);
         retry--;
         sleep(SLEEP_INTERVAL);
     }
